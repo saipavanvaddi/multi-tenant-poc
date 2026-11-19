@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import type {
     Store,
     Product,
@@ -14,12 +15,15 @@ async function getVisitorHost() {
   return requestHeaders.get("host") || "ananya.localhost:3000";
 }
 
-// Fetch current shop details
-export async function getStore(): Promise<Store> {
+// Call the Django API for the tenant that matches the visitor's hostname.
+// Django answers 404 when no shop is registered for that hostname (for
+// example plain localhost:3000), which we show as "Shop not found" instead
+// of crashing the page.
+async function fetchFromTenant(path: string, errorMessage: string) {
   const host = await getVisitorHost();
 
   const response = await fetch(
-    `${API_URL}/api/v1/store/`,
+    `${API_URL}${path}`,
     {
       headers: {
         "X-Forwarded-Host": host,
@@ -28,32 +32,31 @@ export async function getStore(): Promise<Store> {
     }
   );
 
+  if (response.status === 404) {
+    notFound();
+  }
+
   if (!response.ok) {
-    throw new Error("Failed to fetch shop details");
+    throw new Error(errorMessage);
   }
 
   return response.json();
 }
 
+// Fetch current shop details
+export async function getStore(): Promise<Store> {
+  return fetchFromTenant(
+    "/api/v1/store/",
+    "Failed to fetch shop details"
+  );
+}
+
 // Fetch current shop products
 export async function getProducts(): Promise<Product[]> {
-  const host = await getVisitorHost();
-
-  const response = await fetch(
-    `${API_URL}/api/v1/products/`,
-    {
-      headers: {
-        "X-Forwarded-Host": host,
-      },
-      cache: "no-store",
-    }
+  const data: ProductsResponse = await fetchFromTenant(
+    "/api/v1/products/",
+    "Failed to fetch products"
   );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch products");
-  }
-
-  const data: ProductsResponse = await response.json();
 
   return data.products;
 }
