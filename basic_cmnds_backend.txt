@@ -1,0 +1,118 @@
+python --version
+python -m pip --version
+psql --version
+
+Get-Service *postgres*
+
+net start | findstr /i "postgres"
+sc query type= service state= all | findstr /i "postgres"
+
+
+node --version
+npm --version
+
+cd D:\
+mkdir multi-tenant-poc
+cd multi-tenant-poc
+
+mkdir backend
+mkdir frontend
+
+
+A PostgreSQL database can contain multiple schemas.
+schema-per-tenant architecture
+
+
+psql -U postgres
+CREATE DATABASE multi_tenant_db;
+\q
+
+psql -U postgres -d multi_tenant_db
+SELECT current_database();
+
+select schema_name from information_schema.schemata order by schema_name;
+
+cd backend
+.\venv\scripts\activate
+
+python -m pip install --upgrade pip
+pip install django django-tenants psycopg2-binary
+
+django-admin startproject config .
+
+python manage.py startapp tenants
+python manage.py startapp store
+
+TenantMixin: gives us the tenant's schema information and schema creation functionality.
+DomainMixin: gives us the domain information and its relationship with a tenant.
+
+#public schemas
+python manage.py makemigrations tenants
+
+python manage.py migrate_schemas --shared
+
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+ORDER BY table_name;
+
+
+python manage.py makemigrations store
+python manage.py migrate_schemas
+
+
+mkdir tenants\management
+mkdir tenants\management\commands
+
+New-Item tenants\management\__init__.py -ItemType File
+New-Item tenants\management\commands\__init__.py -ItemType File
+
+New-Item .\tenants\management\commands\create_demo_shops.py -ItemType File
+
+python manage.py create_demo_shops
+
+
+SELECT table_schema, table_name
+FROM information_schema.tables
+WHERE table_name = 'store_product'
+ORDER BY table_schema;
+
+create views.py, urls.py
+
+
+in settings.py USE_X_FORWARDED_HOST = True
+above is for 
+
+
+Put it near ALLOWED_HOSTS.
+
+Why?
+
+Later, Next.js will call Django using:
+http://127.0.0.1:8000/api/v1/products/
+
+
+But the actual visitor might be visiting:
+ananya.localhost:3000
+
+
+Next.js will forward that hostname using:
+X-Forwarded-Host: ananya.localhost:3000
+
+
+Django will use the forwarded hostname to identify the correct shop.
+
+Django still validates the hostname against ALLOWED_HOSTS. In production, this header must only be trusted from your controlled proxy, not arbitrary clients.
+
+
+python manage.py runserver 127.0.0.1:8000
+
+curl.exe -H "Host: kiran.localhost" http://127.0.0.1:8000/api/v1/store/
+
+http://ananya.localhost:8000/api/v1/store/
+
+request.tenant	Identifies current shop
+TenantMainMiddleware	Automatically switches schemas
+Product.objects.all()	Reads products from current schema
+X-Forwarded-Host	Forwards visitor hostname
+

@@ -1,0 +1,42 @@
+cd D:\multi-tenant-poc\frontend
+
+npx create-next-app@latest . --typescript --tailwind --eslint --app --use-npm --no-src-dir
+
+mkdir lib
+mkdir types
+mkdir components
+mkdir app\products
+mkdir app\products\[id]
+
+
+create .env.local
+
+frontend/
+│
+├── app/
+│   ├── layout.tsx
+│   ├── page.tsx
+│   │
+│   └── products/
+│       └── [id]/
+│           └── page.tsx
+│
+├── components/
+│   ├── Header.tsx
+│   └── ProductCard.tsx
+│
+├── lib/
+│   └── api.ts
+│
+├── types/
+│   └── index.ts
+│
+└── .env.local
+
+create .env.local
+
+Don't add NEXT_PUBLIC_ in env to this variable. It is only needed on the server.
+
+cd D:\multi-tenant-poc\frontend
+
+npm run dev
